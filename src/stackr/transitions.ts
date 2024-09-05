@@ -1,7 +1,25 @@
 import {Transitions, STF, REQUIRE} from "@stackr/sdk/machine";
 
 import {StackedState} from "./state";
-import {CreateOrderInput, Order} from "./types";
+import {AddBalanceInput, CreateOrderInput, Order} from "./types";
+
+const addBalance: STF<StackedState, AddBalanceInput> = {
+    handler: ({state, inputs}) => {
+        const {address, amount} = inputs;
+        REQUIRE(amount > 0, "Invalid amount");
+
+        let user = state.users[address];
+        if (!user) {
+            user = {
+                ETH: 0,
+                NFT: []
+            }
+        }
+        user.ETH += amount;
+        state.users[address] = user;
+        return state
+    }
+}
 
 const createOrder: STF<StackedState, CreateOrderInput> = {
     handler: ({state, inputs, msgSender, block, emit}) => {
@@ -32,5 +50,6 @@ const createOrder: STF<StackedState, CreateOrderInput> = {
 };
 
 export const transitions: Transitions<StackedState> = {
+    addBalance,
     createOrder,
 };

@@ -6,8 +6,10 @@ import {Stacked} from "./types.ts";
 export const constructTree = (state: Stacked): MerkleTree => {
     const userHashes = Object.entries(state.users).map(([address, assets]) =>
         solidityPackedKeccak256(
-            ["address", "uint256", "uint256"],
-            [address, assets.ETH, assets.NFT.tokenId]
+            ["address", "uint256", "bytes32[]"],
+            [address, assets.ETH, state.users[address].NFT.map((nft) =>
+                solidityPackedKeccak256(["uint256"], [nft.tokenId])
+            )]
         )
     );
     const bidHashes = state.bids.map(

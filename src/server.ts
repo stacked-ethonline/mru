@@ -2,12 +2,50 @@ import {ActionConfirmationStatus} from "@stackr/sdk";
 import express, {Request, Response} from "express";
 import {stackedMachine} from "./stackr/machine";
 import {mru} from "./stackr/mru";
-import {schemas} from "./stackr/schemas";
+import {AddBalanceSchema, schemas} from "./stackr/schemas";
 import {transitions} from "./stackr/transitions";
+import {Bridge} from "@stackr/sdk/plugins";
+
+import {AbiCoder, formatEther, Wallet} from "ethers";
+import {signMessage} from "./utils.ts";
+
 
 const PORT = 3210;
 
+const abiCoder = AbiCoder.defaultAbiCoder();
+const operator = new Wallet(process.env.PRIVATE_KEY as string);
+
 export async function setupServer() {
+
+    Bridge.init(mru, {
+        handlers: {
+            BRIDGE_ETH: async (args) => {
+                const [to, amount] = abiCoder.decode(["address", "uint"], args.data);
+                console.log("Adding ETH to", to, ". Amount = ", amount);
+                const inputs = {
+                    address: to,
+                    amount: Number(amount),
+                };
+                AddBalanceSchema.setEip712domain({
+                    name: "bridge",
+                    version: "1"
+                })
+                const signature = await signMessage(operator, AddBalanceSchema, inputs);
+                const action = AddBalanceSchema.actionFrom({
+                    inputs,
+                    signature,
+                    msgSender: operator.address,
+                });
+
+                return {
+                    transitionName: "addBalance",
+                    action,
+                };
+            },
+        },
+    });
+    console.log("Waiting for BRIDGE_ETH event on the bridge contract...");
+
     const app = express();
     app.use(express.json());
     // allow CORS

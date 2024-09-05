@@ -9,7 +9,7 @@ export interface Stacked {
     users: {
         [key: string]: {
             ETH: number;
-            NFT: NFT;
+            NFT: NFT[];
         };
     };
     bids: Order[];
@@ -31,6 +31,11 @@ export type CreateOrderInput = {
     price: number;
     timestamp: number;
 };
+
+export type AddBalanceInput = {
+    address: string;
+    amount: number;
+}
 
 export type CreateNFTInput = {
     floorPrice: number;
