@@ -1,19 +1,18 @@
 import {ConfirmationEvents, MicroRollup} from "@stackr/sdk";
 import {stackrConfig} from "../../stackr.config";
 import {stackedMachine} from "./machine";
-import {UpdateCounterSchema} from "./schemas";
 import {Playground} from "@stackr/sdk/plugins";
+import {CreateOrderSchema} from "./schemas.ts";
 
 const mru = await MicroRollup({
     config: stackrConfig,
-    actionSchemas: [UpdateCounterSchema],
+    actionSchemas: [CreateOrderSchema],
     stateMachines: [stackedMachine],
     stfSchemaMap: {
-        increment: UpdateCounterSchema,
-        decrement: UpdateCounterSchema,
+        createOrder: CreateOrderSchema,
     },
     blockHooks: {
-        pre: ["sortOrders"],
+        post: ["sortOrders"],
     },
 });
 

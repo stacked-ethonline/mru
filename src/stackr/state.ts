@@ -1,12 +1,15 @@
 import {State} from "@stackr/sdk/machine";
-import {solidityPackedKeccak256} from "ethers";
+import {constructTree} from "./tree";
+import {Stacked} from "./types.ts";
 
-export class StackedState extends State<number> {
-    constructor(state: number) {
+
+export class StackedState extends State<Stacked> {
+    constructor(state: Stacked) {
         super(state);
     }
 
     getRootHash() {
-        return solidityPackedKeccak256(["uint256"], [this.state]);
+        const tree = constructTree(this.state);
+        return tree.getHexRoot();
     }
 }
