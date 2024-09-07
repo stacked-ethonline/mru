@@ -37,6 +37,7 @@ const createOrder: STF<StackedState, CreateOrderInput> = {
         const currentTimestamp = Math.floor(Date.now() / 1000);
 
         const currentNft = state.NFTs.filter(nft => nft.NFT.tokenId === tokenId)[0]
+        REQUIRE(price > currentNft.floorPrice, "Invalid price");
         REQUIRE(currentTimestamp - currentNft.createdAt > SECONDS_IN_24_HOURS && state.filledOrders.filter(order => order.tokenId === currentNft.NFT.tokenId).length === 0, "The auction has expired")
         const userActiveBidsTotal = Object.values(state.bids).flat()
             .filter((bid) => bid.user === actor)
