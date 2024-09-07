@@ -2,6 +2,7 @@ export interface Order {
     id: number;
     user: string;
     price: number;
+    tokenId: number;
     timestamp: number;
 }
 
@@ -12,7 +13,9 @@ export interface Stacked {
             NFT: NFT[];
         };
     };
-    bids: Order[];
+    bids: {
+        [key: string]: Order[];
+    };
     filledOrders: Order[];
     NFTs: NFTDetails[];
 }
@@ -25,18 +28,24 @@ export interface NFT {
 export interface NFTDetails {
     floorPrice: number;
     NFT: NFT;
+    createdAt: number;
 }
 
 export type CreateOrderInput = {
     price: number;
+    tokenId: number;
     timestamp: number;
 };
 
 export type AddBalanceInput = {
     address: string;
     amount: number;
+    timestamp: number;
 }
 
 export type CreateNFTInput = {
+    address: string;
+    tokenId: number;
     floorPrice: number;
+    timestamp: number;
 }

@@ -1,16 +1,39 @@
 {
   "state": {
-    "bids": [],
+    "bids": {
+      "0": [
+        {
+          "id": 0,
+          "user": "0xb337349cfa848A07dC3081380F4c87d2Cb597254",
+          "price": 100,
+          "tokenId": 0,
+          "timestamp": 86400
+        }
+      ]
+    },
     "filledOrders": [],
-    "NFTs": [],
+    "NFTs": [
+      {
+        "floorPrice": 100,
+        "createdAt": 0,
+        "NFT": {
+          "tokenId": 0,
+          "collectionOwner": "0x7804C078Ab991C23011E5600A4A0BCe4591b2610"
+        }
+      }
+    ],
     "users": {
       "0x7804C078Ab991C23011E5600A4A0BCe4591b2610": {
         "NFT": [
           {
           "tokenId": 0,
-          "collectionOwner": "0x94bE2330e995A6A1ef2b563E801Ec04AA9DE03DE"
+            "collectionOwner": "0x7804C078Ab991C23011E5600A4A0BCe4591b2610"
           }
         ],
+        "ETH": 100
+      },
+      "0xb337349cfa848A07dC3081380F4c87d2Cb597254": {
+        "NFT": [],
         "ETH": 100
       }
     }

@@ -1,13 +1,15 @@
-import {ActionConfirmationStatus} from "@stackr/sdk";
+import {ActionConfirmationStatus, ConfirmationEvents} from "@stackr/sdk";
 import express, {Request, Response} from "express";
 import {stackedMachine} from "./stackr/machine";
 import {mru} from "./stackr/mru";
-import {AddBalanceSchema, schemas} from "./stackr/schemas";
+import {AddBalanceSchema, CreateNFTSchema, schemas} from "./stackr/schemas";
 import {transitions} from "./stackr/transitions";
 import {Bridge} from "@stackr/sdk/plugins";
+import {Client, Conversation} from "@xmtp/xmtp-js";
 
-import {AbiCoder, formatEther, Wallet} from "ethers";
+import {AbiCoder, Wallet} from "ethers";
 import {signMessage} from "./utils.ts";
+import {CreateNFTInput} from "./stackr/types.ts";
 
 
 const PORT = 3210;
@@ -15,36 +17,37 @@ const PORT = 3210;
 const abiCoder = AbiCoder.defaultAbiCoder();
 const operator = new Wallet(process.env.PRIVATE_KEY as string);
 
+class XMTPNotifier {
+    xmtpClient: Client;
+    // mapping to store XMTP conversations, keyed by msg sender address.
+    conversations: Map<string, Conversation> = new Map();
+
+    constructor(xmtpClient: Client) {
+        this.xmtpClient = xmtpClient;
+    }
+
+    async getOrCreateConversation(address: string): Promise<Conversation> {
+        if (!this.conversations.has(address)) {
+            const conversation = await this.xmtpClient.conversations.newConversation(
+                address
+            );
+            this.conversations.set(address, conversation);
+        }
+        return this.conversations.get(address)!;
+    }
+
+    async notifyUser(address: string, message: string) {
+        try {
+            const conversation = await this.getOrCreateConversation(address);
+            await conversation.send(message);
+            console.log(`Sent message to ${address}:`, message);
+        } catch (error) {
+            console.error(`Failed to send message to ${address}:`, error);
+        }
+    }
+}
+
 export async function setupServer() {
-
-    Bridge.init(mru, {
-        handlers: {
-            BRIDGE_ETH: async (args) => {
-                const [to, amount] = abiCoder.decode(["address", "uint"], args.data);
-                console.log("Adding ETH to", to, ". Amount = ", amount);
-                const inputs = {
-                    address: to,
-                    amount: Number(amount),
-                };
-                AddBalanceSchema.setEip712domain({
-                    name: "bridge",
-                    version: "1"
-                })
-                const signature = await signMessage(operator, AddBalanceSchema, inputs);
-                const action = AddBalanceSchema.actionFrom({
-                    inputs,
-                    signature,
-                    msgSender: operator.address,
-                });
-
-                return {
-                    transitionName: "addBalance",
-                    action,
-                };
-            },
-        },
-    });
-    console.log("Waiting for BRIDGE_ETH event on the bridge contract...");
 
     const app = express();
     app.use(express.json());
@@ -125,7 +128,77 @@ export async function setupServer() {
         res.json({state: machine.state});
     });
 
+    const xmtpClient = await Client.create(operator);
+    let xmtpNotifier: XMTPNotifier = new XMTPNotifier(xmtpClient);
+    console.log("XMTP client initialized");
+
+    const {events} = mru;
+
+    // events.subscribe(ConfirmationEvents.C1, async (args) => {
+    //     if (args.msgSender) {
+    //         await xmtpNotifier.notifyUser(
+    //             args.msgSender as string,
+    //             `Action submitted: ${JSON.stringify(args)}`
+    //         );
+    //     }
+    // });
+
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
+
+
+    Bridge.init(mru, {
+        handlers: {
+            BRIDGE_ETH: async (args) => {
+                const [to, amount, timestamp] = abiCoder.decode(["address", "uint", "uint"], args.data);
+                console.log("Adding ETH to", to, ". Amount = ", amount);
+                const inputs = {
+                    address: to,
+                    amount: Number(amount),
+                    timestamp: Number(timestamp),
+                };
+                AddBalanceSchema.setEip712domain({
+                    name: "bridge",
+                    version: "1"
+                })
+                const signature = await signMessage(operator, AddBalanceSchema, inputs);
+                const action = AddBalanceSchema.actionFrom({
+                    inputs,
+                    signature,
+                    msgSender: operator.address,
+                });
+
+                return {
+                    transitionName: "addBalance",
+                    action,
+                };
+            },
+            CREATE_NFT: async (args) => {
+                const [to, tokenId, timestamp, floorPrice] = abiCoder.decode(["address", "uint", "uint", "uint"], args.data);
+                const inputs: CreateNFTInput = {
+                    address: to,
+                    tokenId,
+                    floorPrice,
+                    timestamp,
+                };
+                AddBalanceSchema.setEip712domain({
+                    name: "bridge",
+                    version: "1"
+                })
+                const signature = await signMessage(operator, AddBalanceSchema, inputs);
+                const action = CreateNFTSchema.actionFrom({
+                    inputs,
+                    signature,
+                    msgSender: operator.address,
+                });
+                return {
+                    transitionName: "createNFT",
+                    action,
+                }
+            }
+        },
+    });
+    console.log("Waiting for BRIDGE_ETH event on the bridge contract...");
+
 }

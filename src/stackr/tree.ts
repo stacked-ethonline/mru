@@ -12,25 +12,30 @@ export const constructTree = (state: Stacked): MerkleTree => {
             )]
         )
     );
-    const bidHashes = state.bids.map(
-        ({id, user, price, timestamp}) =>
-            solidityPackedKeccak256(
-                ["uint256", "address", "uint256", "uint256"],
-                [id, user, price, timestamp]
+    const bidHashes = Object.entries(state.bids).map(
+        ([tokenId, orders]) => {
+            return (
+                orders.map(({id, user, price, timestamp}) => {
+                    return (solidityPackedKeccak256(
+                        ["uint256", "address", "uint256", "uint256", "uint256"],
+                        [id, user, price, timestamp, Number(tokenId)]
+                    ))
+                })
             )
+        }
     );
     const nftHashes = state.NFTs.map(
-        ({floorPrice, NFT}) =>
+        ({floorPrice, NFT, createdAt}) =>
             solidityPackedKeccak256(
-                ["uint256", "uint256", "address"],
-                [floorPrice, NFT.tokenId, NFT.collectionOwner]
+                ["uint256", "uint256", "address", "uint256"],
+                [floorPrice, NFT.tokenId, NFT.collectionOwner, createdAt]
             )
     )
     const filledOrderHashes = state.filledOrders.map(
-        ({id, user, price, timestamp}) =>
+        ({id, user, price, timestamp, tokenId}) =>
             solidityPackedKeccak256(
-                ["uint256", "address", "uint256", "uint256"],
-                [id, user, price, timestamp]
+                ["uint256", "address", "uint256", "uint256", "uint256"],
+                [id, user, price, timestamp, tokenId]
             )
     );
     const usersRoot = new MerkleTree(userHashes).getHexRoot();
