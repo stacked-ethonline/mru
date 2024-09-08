@@ -176,17 +176,18 @@ export async function setupServer() {
             },
             CREATE_NFT: async (args) => {
                 const [to, tokenId, timestamp, floorPrice] = abiCoder.decode(["address", "uint", "uint", "uint"], args.data);
+                console.log(to, tokenId, timestamp, floorPrice);
                 const inputs: CreateNFTInput = {
                     address: to,
-                    tokenId,
-                    floorPrice,
-                    timestamp,
+                    tokenId: Number(tokenId),
+                    floorPrice: Number(floorPrice),
+                    timestamp: Number(timestamp),
                 };
-                AddBalanceSchema.setEip712domain({
+                CreateNFTSchema.setEip712domain({
                     name: "bridge",
                     version: "1"
                 })
-                const signature = await signMessage(operator, AddBalanceSchema, inputs);
+                const signature = await signMessage(operator, CreateNFTSchema, inputs);
                 const action = CreateNFTSchema.actionFrom({
                     inputs,
                     signature,

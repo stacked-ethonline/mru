@@ -14,7 +14,8 @@ const mru = await MicroRollup({
         createNFT: CreateNFTSchema
     },
     blockHooks: {
-        post: ["sortOrders", "completeOrder"],
+        pre: ["completeOrder"],
+        post: ["sortOrders"],
     },
 });
 
