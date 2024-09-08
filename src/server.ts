@@ -155,7 +155,7 @@ export async function setupServer() {
                 console.log("Adding ETH to", to, ". Amount = ", amount);
                 const inputs = {
                     address: to,
-                    amount: Number(amount),
+                    amount: (amount).toString(),
                     timestamp: Number(timestamp),
                 };
                 AddBalanceSchema.setEip712domain({
@@ -180,7 +180,7 @@ export async function setupServer() {
                 const inputs: CreateNFTInput = {
                     address: to,
                     tokenId: Number(tokenId),
-                    floorPrice: Number(floorPrice),
+                    floorPrice: (floorPrice).toString(),
                     timestamp: Number(timestamp),
                 };
                 CreateNFTSchema.setEip712domain({

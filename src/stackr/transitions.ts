@@ -10,17 +10,17 @@ const addBalance: STF<StackedState, AddBalanceInput> = {
         const {address, amount, timestamp} = inputs;
         REQUIRE(timestamp <= block.timestamp, "INVALID_TIMESTAMP");
 
-        REQUIRE(amount > 0, "Invalid amount");
+        REQUIRE(BigInt(amount) > 0n, "Invalid amount");
 
-        let user = state.users[address];
+        let user = state.state.users[address];
         if (!user) {
             user = {
-                ETH: 0,
+                ETH: "0",
                 NFT: []
             }
         }
-        user.ETH += amount;
-        state.users[address] = user;
+        user.ETH = (BigInt(user.ETH) + BigInt(amount)).toString();
+        state.state.users[address] = user;
         return state
     }
 }
@@ -30,32 +30,34 @@ const createOrder: STF<StackedState, CreateOrderInput> = {
         const actor = msgSender.toString();
         const {price, tokenId, timestamp} = inputs;
         REQUIRE(timestamp <= block.timestamp, "INVALID_TIMESTAMP");
-        REQUIRE(price > 0, "Invalid price");
-        const user = state.users[actor];
+        REQUIRE(BigInt(price) > 0n, "Invalid price");
+        const user = state.state.users[actor];
         REQUIRE(user !== undefined, "User not found");
 
         const currentTimestamp = Math.floor(Date.now() / 1000);
 
-        const currentNft = state.NFTs.filter(nft => nft.NFT.tokenId === tokenId)[0]
-        REQUIRE(price > currentNft.floorPrice, "Invalid price");
-        REQUIRE((currentTimestamp - currentNft.createdAt < SECONDS_IN_24_HOURS) && state.filledOrders.filter(order => order.tokenId === currentNft.NFT.tokenId).length === 0, "The auction has expired")
-        const userActiveBidsTotal = Object.values(state.bids).flat()
+        const currentNft = state.state.NFTs.filter(nft => nft.NFT.tokenId === tokenId)[0]
+        REQUIRE(BigInt(price) > BigInt(currentNft.floorPrice), "Invalid price");
+        REQUIRE((currentTimestamp - currentNft.createdAt < SECONDS_IN_24_HOURS) && state.state.filledOrders.filter(order => order.tokenId === currentNft.NFT.tokenId).length === 0, "The auction has expired")
+        const userActiveBidsTotal = Object.values(state.state.bids).flat()
             .filter((bid) => bid.user === actor)
-            .reduce((acc, bid) => acc + bid.price, 0);
+            .reduce((acc, bid) => acc + BigInt(bid.price), 0n);
         REQUIRE(
-            user.ETH >= userActiveBidsTotal + price,
+            BigInt(user.ETH) >= userActiveBidsTotal + BigInt(price),
             "INSUFFICIENT_BALANCE"
         );
+        if (!state.state.bids[tokenId.toString()]) state.state.bids[tokenId.toString()] = [];
+
         const order: Order = {
             id:
-                state.bids[tokenId.toString()].length + state.filledOrders.length + 1,
+                state.state.bids[tokenId.toString()].length + state.state.filledOrders.length + 1,
             user: actor,
             tokenId,
             price,
             timestamp,
         };
-        state.bids[tokenId.toString()].push(order);
-        emit({name: "BidOrderCreated", value: order});
+        state.state.bids[tokenId.toString()].push(order);
+        // emit({name: "BidOrderCreated", value: order});
         return state;
     },
 };
@@ -64,12 +66,12 @@ const createNFT: STF<StackedState, CreateNFTInput> = {
     handler: ({state, inputs, block}) => {
         const {address, floorPrice, tokenId, timestamp} = inputs;
         REQUIRE(timestamp <= block.timestamp, "INVALID_TIMESTAMP");
-        REQUIRE(floorPrice > 0, "Invalid price");
+        REQUIRE(BigInt(floorPrice) > 0n, "Invalid price");
 
-        let user = state.users[address];
+        let user = state.state.users[address];
         if (!user) {
             user = {
-                ETH: 0,
+                ETH: "0",
                 NFT: []
             }
         }
@@ -78,12 +80,12 @@ const createNFT: STF<StackedState, CreateNFTInput> = {
             collectionOwner: address
         }
         user.NFT.push(nft)
-        state.NFTs.push({
+        state.state.NFTs.push({
             floorPrice,
             createdAt: timestamp,
             NFT: nft
         })
-        state.users[address] = user;
+        state.state.users[address] = user;
         return state;
     }
 }
